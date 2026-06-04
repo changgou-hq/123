@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>刚体转动惯量交互式演示 | 大学物理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#8b5cf6',
+                        accent: '#06b6d4',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'dark-lighter': '#334155'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .text-gradient {
+                background-clip: text;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .shadow-glow {
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            }
+            .slider-thumb::-webkit-slider-thumb {
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #3b82f6;
+                cursor: pointer;
+                box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+                transition: all 0.2s ease;
+            }
+            .slider-thumb::-webkit-slider-thumb:hover {
+                transform: scale(1.2);
+                box-shadow: 0 0 15px rgba(59, 130, 246, 1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-dark via-dark-light to-dark-lighter min-h-screen font-inter text-gray-100">
+    <!-- 顶部导航 -->
+    <nav class="glass sticky top-0 z-50 px-4 py-3 mb-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold">大学物理交互式演示</h1>
+            </div>
+            <div class="text-sm text-gray-400">转动惯量 | Moment of Inertia</div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 pb-12">
+        <!-- 标题区域 -->
+        <div class="text-center mb-10">
+            <h2 class="text-[clamp(2rem,5vw,3.5rem)] font-bold bg-gradient-to-r from-primary via-accent to-secondary text-gradient mb-3">
+                刚体转动惯量交互式演示
+            </h2>
+            <p class="text-gray-400 max-w-2xl mx-auto">
+                探索不同形状刚体的转动惯量，直观理解质量分布与转轴位置对转动惯性的影响
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- 左侧控制面板 -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- 刚体选择卡片 -->
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        刚体选择
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <button class="shape-btn active" data-shape="point">
+                            <div class="text-2xl mb-1">●</div>
+                            <div class="text-xs">质点</div>
+                        </button>
+                        <button class="shape-btn" data-shape="rod-center">
+                            <div class="text-2xl mb-1">━</div>
+                            <div class="text-xs">细杆(中心)</div>
+                        </button>
+                        <button class="shape-btn" data-shape="rod-end">
+                            <div class="text-2xl mb-1">╺</div>
+                            <div class="text-xs">细杆(端点)</div>
+                        </button>
+                        <button class="shape-btn" data-shape="disk">
+                            <div class="text-2xl mb-1">●</div>
+                            <div class="text-xs">圆盘</div>
+                        </button>
+                        <button class="shape-btn" data-shape="ring">
+                            <div class="text-2xl mb-1">○</div>
+                            <div class="text-xs">圆环</div>
+                        </button>
+                        <button class="shape-btn" data-shape="sphere">
+                            <div class="text-2xl mb-1">◉</div>
+                            <div class="text-xs">球体</div>
+                        </button>
+                    </div>
+                    
+                    <div class="bg-dark/50 rounded-lg p-3 border border-primary/30">
+                        <div class="text-xs text-gray-400 mb-1">转动惯量公式</div>
+                        <div id="formula" class="text-lg font-mono text-center text-primary">I = mR²</div>
+                    </div>
+                </div>
+                
+                <!-- 参数调节卡片 -->
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                        参数调节
+                    </h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-medium">质量 m</label>
+                                <span id="mass-value" class="text-lg font-bold text-primary">1.0 kg</span>
+                            </div>
+                            <input type="range" id="mass" min="0.5" max="5.0" step="0.1" value="1.0" 
+                                   class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-medium">尺寸 R/L</label>
+                                <span id="size-value" class="text-lg font-bold text-accent">1.0 m</span>
+                            </div>
+                            <input type="range" id="size" min="0.2" max="2.0" step="0.1" value="1.0" 
+                                   class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb">
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-medium">角速度 ω</label>
+                                <span id="omega-value" class="text-lg font-bold text-secondary">2.0 rad/s</span>
+                            </div>
+                            <input type="range" id="omega" min="0.5" max="10.0" step="0.1" value="2.0" 
+                                   class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 控制按钮卡片 -->
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        动画控制
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <button id="startBtn" class="bg-success hover:bg-success/80 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-success/30">
+                            开始
+                        </button>
+                        <button id="resetBtn" class="bg-danger hover:bg-danger/80 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-danger/30">
+                            重置
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="slowBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300">
+                            减速
+                        </button>
+                        <button id="fastBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300">
+                            加速
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 实时数据卡片 -->
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        实时物理量
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-dark/50 rounded-lg p-3 border-l-4 border-primary">
+                            <div class="text-xs text-gray-400 mb-1">转动惯量 I</div>
+                            <div id="inertia" class="text-2xl font-bold text-primary">0.000 <span class="text-sm font-normal">kg·m²</span></div>
+                        </div>
+                        
+                        <div class="bg-dark/50 rounded-lg p-3 border-l-4 border-success">
+                            <div class="text-xs text-gray-400 mb-1">角动量 L</div>
+                            <div id="angularMomentum" class="text-2xl font-bold text-success">0.000 <span class="text-sm font-normal">kg·m²/s</span></div>
+                        </div>
+                        
+                        <div class="bg-dark/50 rounded-lg p-3 border-l-4 border-danger">
+                            <div class="text-xs text-gray-400 mb-1">转动动能 E</div>
+                            <div id="kineticEnergy" class="text-2xl font-bold text-danger">0.000 <span class="text-sm font-normal">J</span></div>
+                        </div>
+                        
+                        <div class="bg-dark/50 rounded-lg p-3 border-l-4 border-warning">
+                            <div class="text-xs text-gray-400 mb-1">旋转角度 θ</div>
+                            <div id="angle" class="text-2xl font-bold text-warning">0.00 <span class="text-sm font-normal">rad</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧内容区域 -->
+            <div class="lg:col-span-8 space-y-6">
+                <!-- 动画展示卡片 -->
+                <div class="glass rounded-2xl p-6 shadow-xl h-full">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        刚体旋转动画
+                    </h3>
+                    
+                    <div class="relative">
+                        <canvas id="animationCanvas" width="700" height="500" class="w-full rounded-xl bg-dark/50 border border-gray-700"></canvas>
+                        
+                        <!-- 速度矢量显示 -->
+                        <div id="velocityIndicator" class="absolute top-4 right-4 bg-dark/80 rounded-lg p-3 glass">
+                            <div class="text-xs text-gray-400 mb-1">线速度 v</div>
+                            <div id="linearVelocity" class="text-lg font-bold text-accent">0.00 m/s</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 物理量对比图表 -->
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        物理量关系图
+                    </h3>
+                    
+                    <div class="h-64">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                    
+                    <p class="text-xs text-gray-400 mt-3 text-center">
+                        图表展示了不同形状刚体在相同质量和尺寸下的转动惯量对比
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 物理原理说明 -->
+        <div class="glass rounded-2xl p-6 shadow-xl mt-8">
+            <h3 class="text-xl font-semibold mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                物理原理
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-semibold text-primary mb-2">基本概念</h4>
+                    <p class="text-gray-300 text-sm mb-3">
+                        转动惯量是刚体转动时惯性大小的量度，它描述了刚体改变其转动状态的难易程度。
+                        与平动中的质量类似，但转动惯量不仅取决于质量，还与质量分布和转轴位置有关。
+                    </p>
+                    
+                    <h4 class="font-semibold text-primary mb-2">基本公式</h4>
+                    <ul class="text-sm text-gray-300 space-y-1">
+                        <li>质点系：I = Σmᵢrᵢ²</li>
+                        <li>连续刚体：I = ∫r²dm</li>
+                        <li>角动量：L = Iω</li>
+                        <li>转动动能：E = ½Iω²</li>
+                        <li>平行轴定理：I = I<sub>c</sub> + md²</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold text-primary mb-2">常见刚体转动惯量</h4>
+                    <div class="overflow-x-auto">
+                        <table class="text-sm text-gray-300 w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left py-2">刚体形状</th>
+                                    <th class="text-left py-2">转轴</th>
+                                    <th class="text-left py-2">公式</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-700/50">
+                                    <td class="py-2">质点</td>
+                                    <td>距离转轴R</td>
+                                    <td>I = mR²</td>
+                                </tr>
+                                <tr class="border-b border-gray-700/50">
+                                    <td class="py-2">细杆</td>
+                                    <td>中心垂直轴</td>
+                                    <td>I = (1/12)mL²</td>
+                                </tr>
+                                <tr class="border-b border-gray-700/50">
+                                    <td class="py-2">细杆</td>
+                                    <td>端点垂直轴</td>
+                                    <td>I = (1/3)mL²</td>
+                                </tr>
+                                <tr class="border-b border-gray-700/50">
+                                    <td class="py-2">圆盘</td>
+                                    <td>中心垂直轴</td>
+                                    <td>I = (1/2)mR²</td>
+                                </tr>
+                                <tr class="border-b border-gray-700/50">
+                                    <td class="py-2">圆环</td>
+                                    <td>中心垂直轴</td>
+                                    <td>I = mR²</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2">实心球</td>
+                                    <td>直径</td>
+                                    <td>I = (2/5)mR²</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 bg-primary/10 rounded-lg p-4 border border-primary/30">
+                <h4 class="font-semibold text-primary mb-2">核心结论</h4>
+                <ul class="text-sm text-gray-300 space-y-1 list-disc list-inside">
+                    <li>质量越大，转动惯量越大</li>
+                    <li>质量分布离转轴越远，转动惯量越大</li>
+                    <li>同一刚体，转轴位置不同，转动惯量也不同</li>
+                    <li>转动惯量是标量，具有可加性</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .shape-btn {
+            @apply bg-gray-700 hover:bg-gray-600 text-white rounded-lg p-3 transition-all duration-300 flex flex-col items-center justify-center border-2 border-transparent;
+        }
+        .shape-btn.active {
+            @apply bg-primary/20 border-primary text-primary shadow-glow;
+        }
+    </style>
+
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById('animationCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const shapeBtns = document.querySelectorAll('.shape-btn');
+        const massSlider = document.getElementById('mass');
+        const sizeSlider = document.getElementById('size');
+        const omegaSlider = document.getElementById('omega');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const slowBtn = document.getElementById('slowBtn');
+        const fastBtn = document.getElementById('fastBtn');
+        
+        const massValue = document.getElementById('mass-value');
+        const sizeValue = document.getElementById('size-value');
+        const omegaValue = document.getElementById('omega-value');
+        const inertiaDisplay = document.getElementById('inertia');
+        const angularMomentumDisplay = document.getElementById('angularMomentum');
+        const kineticEnergyDisplay = document.getElementById('kineticEnergy');
+        const angleDisplay = document.getElementById('angle');
+        const formulaDisplay = document.getElementById('formula');
+        const linearVelocityDisplay = document.getElementById('linearVelocity');
+        
+        // 物理参数
+        let mass = 1.0;
+        let size = 1.0;
+        let omega = 2.0;
+        let angle = 0;
+        let isRunning = false;
+        let animationId = null;
+        let currentShape = 'point';
+        let timeScale = 1.0;
+        
+        // 转动惯量计算公式
+        const inertiaFormulas = {
+            'point': (m, r) => m * r * r,
+            'rod-center': (m, l) => (1/12) * m * l * l,
+            'rod-end': (m, l) => (1/3) * m * l * l,
+            'disk': (m, r) => 0.5 * m * r * r,
+            'ring': (m, r) => m * r * r,
+            'sphere': (m, r) => (2/5) * m * r * r
+        };
+        
+        const formulaTexts = {
+            'point': 'I = mR²',
+            'rod-center': 'I = (1/12)mL²',
+            'rod-end': 'I = (1/3)mL²',
+            'disk': 'I = (1/2)mR²',
+            'ring': 'I = mR²',
+            'sphere': 'I = (2/5)mR²'
+        };
+        
+        const shapeNames = {
+            'point': '质点',
+            'rod-center': '细杆(中心)',
+            'rod-end': '细杆(端点)',
+            'disk': '圆盘',
+            'ring': '圆环',
+            'sphere': '球体'
+        };
+        
+        // 初始化对比图表
+        let comparisonChart;
+        function initComparisonChart() {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            
+            comparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['质点', '细杆(中心)', '细杆(端点)', '圆盘', '圆环', '球体'],
+                    datasets: [{
+                        label: '转动惯量 (kg·m²)',
+                        data: calculateAllInertias(),
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(239, 68, 68, 0.7)',
+                            'rgba(139, 92, 246, 0.7)',
+                            'rgba(6, 182, 212, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(139, 92, 246, 1)',
+                            'rgba(6, 182, 212, 1)'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(59, 130, 246, 0.5)',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // 计算所有形状的转动惯量
+        function calculateAllInertias() {
+            return [
+                inertiaFormulas['point'](mass, size),
+                inertiaFormulas['rod-center'](mass, size),
+                inertiaFormulas['rod-end'](mass, size),
+                inertiaFormulas['disk'](mass, size),
+                inertiaFormulas['ring'](mass, size),
+                inertiaFormulas['sphere'](mass, size)
+            ];
+        }
+        
+        // 更新对比图表
+        function updateComparisonChart() {
+            if (comparisonChart) {
+                comparisonChart.data.datasets[0].data = calculateAllInertias();
+                comparisonChart.update();
+            }
+        }
+        
+        // 更新参数显示
+        function updateParameterDisplays() {
+            massValue.textContent = `${mass.toFixed(1)} kg`;
+            sizeValue.textContent = `${size.toFixed(1)} m`;
+            omegaValue.textContent = `${omega.toFixed(1)} rad/s`;
+            formulaDisplay.textContent = formulaTexts[currentShape];
+            calculateAndDisplayPhysics();
+            updateComparisonChart();
+        }
+        
+        // 计算并显示物理量
+        function calculateAndDisplayPhysics() {
+            const I = inertiaFormulas[currentShape](mass, size);
+            const L = I * omega;
+            const E = 0.5 * I * omega * omega;
+            const v = omega * size; // 边缘线速度
+            
+            // 数字动画效果
+            animateNumber(inertiaDisplay, I, 3);
+            animateNumber(angularMomentumDisplay, L, 3);
+            animateNumber(kineticEnergyDisplay, E, 3);
+            animateNumber(angleDisplay, angle, 2);
+            linearVelocityDisplay.textContent = `${v.toFixed(2)} m/s`;
+        }
+        
+        // 数字动画函数
+        function animateNumber(element, targetValue, decimals) {
+            const currentValue = parseFloat(element.textContent);
+            const diff = targetValue - currentValue;
+            
+            if (Math.abs(diff) < 0.001) {
+                element.innerHTML = `${targetValue.toFixed(decimals)} <span class="text-sm font-normal">${element.querySelector('span')?.textContent || ''}</span>`;
+                return;
+            }
+            
+            const step = diff / 10;
+            let value = currentValue;
+            
+            const animation = setInterval(() => {
+                value += step;
+                if ((step > 0 && value >= targetValue) || (step < 0 && value <= targetValue)) {
+                    value = targetValue;
+                    clearInterval(animation);
+                }
+                element.innerHTML = `${value.toFixed(decimals)} <span class="text-sm font-normal">${element.querySelector('span')?.textContent || ''}</span>`;
+            }, 20);
+        }
+        
+        // 绘制刚体
+        function drawRigidBody() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const scale = 120; // 像素/米 缩放比例
+            
+            // 绘制背景网格
+            drawGrid(centerX, centerY, scale);
+            
+            // 绘制转轴
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.fillStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 4, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Inter';
+            ctx.fillText('转轴 O', centerX - 25, centerY + 35);
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(angle);
+            
+            const scaledSize = size * scale;
+            
+            switch(currentShape) {
+                case 'point':
+                    drawPointMass(scaledSize);
+                    break;
+                    
+                case 'rod-center':
+                    drawRod(scaledSize, true);
+                    break;
+                    
+                case 'rod-end':
+                    drawRod(scaledSize, false);
+                    break;
+                    
+                case 'disk':
+                    drawDisk(scaledSize);
+                    break;
+                    
+                case 'ring':
+                    drawRing(scaledSize);
+                    break;
+                    
+                case 'sphere':
+                    drawSphere(scaledSize);
+                    break;
+            }
+            
+            ctx.restore();
+            
+            // 绘制角速度方向箭头
+            drawAngularVelocityArrow(centerX, centerY, 100);
+        }
+        
+        // 绘制背景网格
+        function drawGrid(centerX, centerY, scale) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            
+            // 绘制水平线
+            for (let i = -3; i <= 3; i++) {
+                const y = centerY + i * scale;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // 绘制垂直线
+            for (let i = -3; i <= 3; i++) {
+                const x = centerX + i * scale;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // 绘制坐标轴
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(canvas.width, centerY);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, canvas.height);
+            ctx.stroke();
+        }
+        
+        // 绘制质点
+        function drawPointMass(scaledSize) {
+            // 绘制连线
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(scaledSize, 0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 绘制质点
+            const radius = 15 + mass * 5;
+            const gradient = ctx.createRadialGradient(scaledSize, 0, 0, scaledSize, 0, radius);
+            gradient.addColorStop(0, '#60a5fa');
+            gradient.addColorStop(1, '#1e40af');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(scaledSize, 0, radius, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // 添加高光
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(scaledSize - radius/3, -radius/3, radius/3, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // 标注半径
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Inter';
+            ctx.fillText('R', scaledSize/2 - 10, -15);
+        }
+        
+        // 绘制细杆
+        function drawRod(scaledSize, isCenter) {
+            const rodLength = scaledSize;
+            const rodWidth = 10 + mass * 3;
+            const offsetX = isCenter ? -rodLength/2 : 0;
+            
+            // 绘制细杆
+            const gradient = ctx.createLinearGradient(offsetX, -rodWidth/2, offsetX, rodWidth/2);
+            gradient.addColorStop(0, '#60a5fa');
+            gradient.addColorStop(0.5, '#3b82f6');
+            gradient.addColorStop(1, '#1e40af');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(offsetX, -rodWidth/2, rodLength, rodWidth);
+            
+            ctx.strokeStyle = '#1e40af';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(offsetX, -rodWidth/2, rodLength, rodWidth);
+            
+            // 标注长度
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Inter';
+            ctx.fillText('L', offsetX + rodLength/2 - 10, -rodWidth/2 - 15);
+        }
+        
+        // 绘制圆盘
+        function drawDisk(scaledSize) {
+            // 绘制圆盘
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, scaledSize);
+            gradient.addColorStop(0, 'rgba(96, 165, 250, 0.8)');
+            gradient.addColorStop(1, 'rgba(30, 64, 175, 0.8)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#1e40af';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // 绘制半径线
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(scaledSize, 0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 标注半径
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Inter';
+            ctx.fillText('R', scaledSize/2 - 10, -15);
+        }
+        
+        // 绘制圆环
+        function drawRing(scaledSize) {
+            const ringWidth = 10 + mass * 3;
+            
+            // 绘制圆环
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = ringWidth;
+            ctx.beginPath();
+            ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#1e40af';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, scaledSize - ringWidth/2, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, scaledSize + ringWidth/2, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            // 绘制半径线
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(scaledSize, 0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 标注半径
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Inter';
+            ctx.fillText('R', scaledSize/2 - 10, -15);
+        }
+        
+        // 绘制球体
+        function drawSphere(scaledSize) {
+            // 绘制球体
+            const gradient = ctx.createRadialGradient(-scaledSize/3, -scaledSize/3, 0, 0, 0, scaledSize);
+            gradient.addColorStop(0, 'rgba(147, 197, 253, 0.9)');
+            gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.8)');
+            gradient.addColorStop(1, 'rgba(30, 64, 175, 0.9)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, scaledSize, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#1e40af';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // 绘制经纬线
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            
+            // 赤道
+            ctx.beginPath();
+            ctx.ellipse(0, 0, scaledSize, scaledSize * 0.3, 0, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            // 经线
+            for (let i = 0; i < 4; i++) {
+                const angle = i * Math.PI / 4;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, scaledSize * Math.cos(angle), scaledSize, 0, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+            
+            // 标注半径
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(scaledSize, 0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px Inter';
+            ctx.fillText('R', scaledSize/2 - 10, -15);
+        }
+        
+        // 绘制角速度方向箭头
+        function drawAngularVelocityArrow(cx, cy, radius) {
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 3;
+            ctx.fillStyle = '#ef4444';
+            
+            // 绘制圆弧
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 1.5, false);
+            ctx.stroke();
+            
+            // 绘制箭头
+            const arrowAngle = Math.PI * 1.5;
+            const arrowX = cx + radius * Math.cos(arrowAngle);
+            const arrowY = cy + radius * Math.sin(arrowAngle);
+            
+            ctx.save();
+            ctx.translate(arrowX, arrowY);
+            ctx.rotate(arrowAngle + Math.PI/2);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-10, -10);
+            ctx.lineTo(10, -10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            
+            // 标注ω
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 18px Inter';
+            ctx.fillText('ω', cx + radius + 15, cy - radius + 15);
+        }
+        
+        // 更新动画
+        function update() {
+            if (!isRunning) return;
+            
+            angle += omega * 0.02 * timeScale;
+            if (angle > 2 * Math.PI) {
+                angle -= 2 * Math.PI;
+            }
+            
+            calculateAndDisplayPhysics();
+            drawRigidBody();
+            
+            animationId = requestAnimationFrame(update);
+        }
+        
+        // 重置
+        function reset() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            angle = 0;
+            timeScale = 1.0;
+            
+            startBtn.textContent = '开始';
+            startBtn.classList.remove('bg-warning', 'hover:bg-warning/80', 'shadow-warning/30');
+            startBtn.classList.add('bg-success', 'hover:bg-success/80', 'shadow-success/30');
+            
+            calculateAndDisplayPhysics();
+            drawRigidBody();
+        }
+        
+        // 事件监听
+        shapeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                shapeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentShape = btn.dataset.shape;
+                updateParameterDisplays();
+                drawRigidBody();
+            });
+        });
+        
+        massSlider.addEventListener('input', (e) => {
+            mass = parseFloat(e.target.value);
+            updateParameterDisplays();
+            if (!isRunning) drawRigidBody();
+        });
+        
+        sizeSlider.addEventListener('input', (e) => {
+            size = parseFloat(e.target.value);
+            updateParameterDisplays();
+            if (!isRunning) drawRigidBody();
+        });
+        
+        omegaSlider.addEventListener('input', (e) => {
+            omega = parseFloat(e.target.value);
+            updateParameterDisplays();
+        });
+        
+        startBtn.addEventListener('click', () => {
+            isRunning = !isRunning;
+            if (isRunning) {
+                startBtn.textContent = '暂停';
+                startBtn.classList.remove('bg-success', 'hover:bg-success/80', 'shadow-success/30');
+                startBtn.classList.add('bg-warning', 'hover:bg-warning/80', 'shadow-warning/30');
+                animationId = requestAnimationFrame(update);
+            } else {
+                startBtn.textContent = '开始';
+                startBtn.classList.remove('bg-warning', 'hover:bg-warning/80', 'shadow-warning/30');
+                startBtn.classList.add('bg-success', 'hover:bg-success/80', 'shadow-success/30');
+                cancelAnimationFrame(animationId);
+            }
+        });
+        
+        resetBtn.addEventListener('click', reset);
+        
+        slowBtn.addEventListener('click', () => {
+            timeScale = Math.max(0.2, timeScale * 0.5);
+        });
+        
+        fastBtn.addEventListener('click', () => {
+            timeScale = Math.min(5.0, timeScale * 2);
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initComparisonChart();
+            updateParameterDisplays();
+            drawRigidBody();
+        });
+    </script>
+</body>
+</html>
